@@ -1,1 +1,0 @@
-npm install cors express mysql prisma nodemon

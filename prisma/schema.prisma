@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model employees {
+  id Int @id @default(autoincrement())
+  emp_num String @db.VarChar(40) @unique
+  firstname String @db.VarChar(40)
+  midname String @db.VarChar(40)
+  lastname String @db.VarChar(40)
+  addressline String @db.VarChar(40)
+  brgy String @db.VarChar(40)
+  province String @db.VarChar(40)
+  country String @db.VarChar(40)
+  zipcode Int @db.Integer
+  
+  ass_des assign_designation[]
+}
+
+model assign_designation {
+  id Int @id @default(autoincrement())
+  emp employees @relation(fields: [empNum] , references: [emp_num])
+  empNum String @db.VarChar(40)
+  designation designation @relation(fields: [designationName , designationDepartment], references: [designation_name , departmentName])
+  designationName String
+  designationDepartment String 
+  emp_type String @db.VarChar(40)
+  status String @db.VarChar(10)
+}
+
+model designation {
+  id Int @id @default(autoincrement())
+  designation_name String @db.VarChar(40)
+  department departments @relation(fields: [departmentName , departmentStatus], references: [dept_name , status])
+  departmentName String
+  departmentStatus String
+
+  ass_des assign_designation[]
+  @@unique([designation_name, departmentName])
+}
+
+model departments {
+  in Int @id @default(autoincrement())
+  dept_name String @db.VarChar(40)
+  status String @db.VarChar(15)
+
+  @@unique([dept_name, status])
+  designation designation[]
+}
