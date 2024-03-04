@@ -174,7 +174,7 @@ app.post('/updDep', async (req, res) => {
     try {
         const upd = await prisma.departments.update({
             where: {
-                id: req.body.id
+                id: parseInt(req.body.id)
             },
             data: {
                 status: req.body.statusDep,
@@ -186,6 +186,8 @@ app.post('/updDep', async (req, res) => {
         console.log(err);
     }
 });
+
+app.post('/upd')
 
 //delete
 
