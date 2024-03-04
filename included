@@ -1,0 +1,6 @@
+cors 
+prisma 
+@prisma/client
+express
+nodemon
+postgres
