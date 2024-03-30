@@ -1,13 +1,13 @@
 install packages:
 
-npm init y 
+- npm init y 
 
-npm install cors prisma @prisma/client express nodemon postgres
+- npm install cors prisma @prisma/client express nodemon postgres
 
 to run the server:
 
-npm start
+- npm start
 
 to run the prisma client:
 
-npx prisma studio
+- npx prisma studio
