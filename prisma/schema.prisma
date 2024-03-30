@@ -32,9 +32,10 @@ model assign_designation {
   id Int @id @default(autoincrement())
   emp employees @relation(fields: [empNum] , references: [emp_num])
   empNum String @db.VarChar(40)
-  designation designation @relation(fields: [designationName , designationDepartment], references: [designation_name , departmentName])
+  designation designation @relation(fields: [designationName], references: [designation_name])
   designationName String
-  designationDepartment String 
+  department departments @relation(fields: [DepartmentName] , references: [dept_name])
+  DepartmentName String 
   emp_type String @db.VarChar(40)
   status statusEmp
 }
@@ -42,21 +43,21 @@ model assign_designation {
 model designation {
   id Int @id @default(autoincrement())
   designation_name String @db.VarChar(40)
-  department departments @relation(fields: [departmentName , departmentStatus], references: [dept_name , status])
+  department departments @relation(fields: [departmentName], references: [dept_name])
   departmentName String
-  departmentStatus statusDep
 
   ass_des assign_designation[]
-  @@unique([designation_name, departmentName])
+  @@unique([designation_name])
 }
 
 model departments {
   id Int @id @default(autoincrement())
   dept_name String @db.VarChar(40)
   status statusDep
-
-  @@unique([dept_name, status])
+  
+  @@unique([dept_name])
   designation designation[]
+  assDes assign_designation[]
 }
 
 

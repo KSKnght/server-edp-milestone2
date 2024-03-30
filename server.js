@@ -1,10 +1,11 @@
 import express, { json } from 'express'
 import { PrismaClient } from '@prisma/client'
 import cors from 'cors'
+import { connect } from 'tls';
 
 const app = express();
 app.use(express.json());
-// app.use(express.urlencoded({extended:false}));
+app.use(express.urlencoded({extended:false}));
 app.use(cors());
 
 const prisma = new PrismaClient();
@@ -17,8 +18,23 @@ app.get('/', (req, res) => {
 //read
 
 app.get('/list', async (req, res) => {
-    const list = await prisma.assign_designation.findMany();
-    res.status(200).json(list);
+    // const list = await prisma.assign_designation.findMany();
+    const emp = await prisma.employees.findMany({
+        select:{
+            id: true,
+            emp_num: true,
+            lastname: true,
+            firstname: true,
+                ass_des: {
+                    select: {
+                        designationName: true,
+                        DepartmentName: true
+                    }
+                }
+        },
+        
+    });
+    res.status(200).json(emp);
 });
 
 // app.get('/showid', async (req, res) => {
@@ -65,11 +81,14 @@ app.get('/emp/:id', async (req, res) => {
 
         const emp = await prisma.employees.findFirst({
             where: {
-                id: parseInt(empId),
+                id: Number(empId),
             },
             include: {
                 ass_des: {
                     select: {
+                        designation:{
+                            
+                        },
                         designationName: true,
                         designationDepartment: true,
                         emp_type: true,
@@ -80,7 +99,6 @@ app.get('/emp/:id', async (req, res) => {
         });
 
         res.status(200).json(emp);
-        console.log("success!");
     }
     catch (err) {
         console.log(err);
@@ -140,7 +158,7 @@ app.post('/createEmp', async (req, res) => { //sabay na ang assign_department
             }
         });
 
-        var idEmp = await prisma.employees.findFirst({
+        const idEmp = await prisma.employees.findFirst({
             where: {
                 emp_num: req.body.emp_num,
             },
@@ -149,12 +167,40 @@ app.post('/createEmp', async (req, res) => { //sabay na ang assign_department
             },
         });
 
+        
+            const r = await prisma.designation.findFirst({
+                where: {
+                    designation_name: req.body.designationName,
+                    departmentName: req.body.designationDepartment
+                }
+            })
+
+            const p = await prisma.departments.findFirst({
+                where: {
+                    dept_name: req.body.designationDepartment
+                }
+            })
+        
+            if (r == null) {
+                await prisma.designation.create({
+                    data: {
+                        designation_name: req.body.designationName,
+                        department: {
+                            connect: { id: p.id }
+                        }
+                    }
+                })
+            }
+
         await prisma.assign_designation.create({
             data: {
-                emp_type: 'regular',
+                emp_type: 'REGULAR',
                 status: 'ACTIVE',
                 designation: {
-                    connect: { id: 1 }
+                    connect: { designation_name_departmentName: {
+                        departmentName: req.body.designationDepartment,
+                        designation_name: req.body.designationName
+                    } }
                 },
                 emp: {
                     connect: idEmp
@@ -170,27 +216,136 @@ app.post('/createEmp', async (req, res) => { //sabay na ang assign_department
 });
 
 //update
-app.post('/updDep', async (req, res) => {
+app.post('/upd/:id', async (req, res) => {
     try {
-        const upd = await prisma.departments.update({
+        await prisma.departments.update({
             where: {
-                id: parseInt(req.body.id)
+                id: Number(req.params.id)
             },
             data: {
                 status: req.body.statusDep,
             }
         });
-        console.log("success!");
     }
     catch (err) {
         console.log(err);
     }
 });
 
-app.post('/upd')
+app.post('/updEmp/:id', async (req, res) => {
+    try {
+        await prisma.employees.update({
+            where: {
+                id: Number(req.params.id)
+            },
+            data: {
+                emp_num: req.body.emp_num,
+                firstname: req.body.firstname,
+                midname: req.body.midname,
+                lastname: req.body.lastname,
+                addressline: req.body.addressline,
+                brgy: req.body.brgy,
+                province: req.body.province,
+                country: req.body.country,
+                zipcode: req.body.zipcode,
+            },
+        });
+
+        const a = await prisma.assign_designation.findFirst({
+            where: {
+                empNum: req.body.emp_num
+            },
+        });
+
+        await prisma.assign_designation.update({
+            where: {
+                id: a.id,
+            },
+            data: {
+                status: req.body.status,
+            }
+        })
+
+        if (req.body.designationName != a.designationName || req.body.designationDepartment != a.designationDepartment) {
+            const r = await prisma.designation.findFirst({
+                where: {
+                    designation_name: req.body.designationName,
+                    departmentName: req.body.designationDepartment
+                }
+            })
+
+            const p = await prisma.departments.findFirst({
+                where: {
+                    dept_name: req.body.designationDepartment
+                }
+            })
+        
+            if (r == null) {
+                await prisma.designation.create({
+                    data: {
+                        designation_name: req.body.designationName,
+                        department: {
+                            connect: { id: p.id }
+                        }
+                    }
+                })
+            }
+        
+            await prisma.assign_designation.update({
+                where: {
+                    id: a.id
+                },
+                data: {
+                    designation: {
+                        connect: { designation_name_departmentName: {
+                            departmentName: req.body.designationDepartment,
+                            designation_name: req.body.designationName
+                        } }
+                    }
+                },
+                include: {designation: true}
+            })
+
+            console.log('nag update ang designation/department')
+        } 
+
+        console.log('nag update?')
+        console.log(req.body.num);
+    }
+    catch (err) {
+        console.log(err);
+    }
+});
 
 //delete
-
+app.post('/delEmp', async (req, res) => {
+    try {
+        const empnum = await prisma.employees.findFirst({
+            where: {
+                id: Number(req.body.id)
+            },
+            select: {
+                emp_num: true,
+            }
+        })
+        
+        await prisma.assign_designation.deleteMany({
+            where: {
+                empNum: empnum.emp_num,
+            }
+        })
+    
+        await prisma.employees.delete({
+            where: {
+                emp_num: empnum.emp_num,
+            }
+        }) 
+        console.log('delete')
+    } catch (error) {
+        console.log(error)
+    }
+    
+});
 
 //tests
 app.listen(port, () => {
@@ -204,15 +359,16 @@ async function createEmp() {
                 emp_type: 'regular',
                 status: 'AWOL',
                 designation: {
-                    connect: { id: 1 }
+                    connectOrCreate: { id: 1 }
                 },
                 emp: {
-                    connect: { id: 3 }
+                    connect: { id: 102 }
                 }
             },
             include: {emp: true, designation: true},
         });
         console.log("success!");
+        
     }
     catch (err) {
         console.log(err);
@@ -269,7 +425,7 @@ async function updateDep() {
                 id: 1
             },
             data: {
-                status: 'ACTIVE',
+                status: 'INACTIVE',
             }
         });
         console.log("success!");
@@ -279,4 +435,88 @@ async function updateDep() {
     }
 }
 
-updateDep();
+async function delEmp() {
+    const empnum = await prisma.employees.findFirst({
+        where: {
+            id: 21,
+        },
+        select: {
+            emp_num: true,
+        }
+    })
+    
+    await prisma.assign_designation.deleteMany({
+        where: {
+            empNum: empnum.emp_num,
+        }
+    })
+
+    await prisma.employees.delete({
+        where: {
+            emp_num: empnum.emp_num,
+        }
+    })
+    console.log('deleted!')
+}
+
+async function tryUpd() {
+    const a = await prisma.assign_designation.findFirst({
+        where: {
+            empNum: 'kweqwepqojqwe'
+        },
+    });
+
+    // await prisma.assign_designation.update({
+    //     where: {
+    //         id: a.id,
+    //     },
+    //     data: {
+    //         status: 'AWOL',
+    //         designation: {
+    //             department: {
+    //                 connectOrCreate: { id: 3}
+    //             }
+    //         }
+    //     },
+    //     include: {designation: true}
+    // })
+
+    const r = await prisma.designation.findFirst({
+        where: {
+            designation_name: 'Back',
+            departmentName: 'DS'
+        }
+    })
+
+    if (r == null) {
+        await prisma.designation.create({
+            data: {
+                designation_name: 'Back',
+                department: {
+                    connect: { id: 3 }
+                }
+            }
+        })
+    }
+
+    await prisma.assign_designation.update({
+        where: {
+            id: 6
+        },
+        data: {
+            designation: {
+                connect: { designation_name_departmentName: {
+                    departmentName: 'DS',
+                    designation_name: 'Back'
+                } }
+            }
+        },
+        include: {designation: true}
+    })
+
+    console.log(r)
+}
+// tryUpd()
+// createEmp()
+// delEmp()
+
