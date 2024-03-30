@@ -28,7 +28,8 @@ app.get('/list', async (req, res) => {
                 ass_des: {
                     select: {
                         designationName: true,
-                        DepartmentName: true
+                        DepartmentName: true,
+                        status: true
                     }
                 }
         },
@@ -90,7 +91,7 @@ app.get('/emp/:id', async (req, res) => {
                             
                         },
                         designationName: true,
-                        designationDepartment: true,
+                        DepartmentName: true,
                         emp_type: true,
                         status: true,
                     }
