@@ -26,6 +26,8 @@ model employees {
   zipcode Int @db.Integer
   
   ass_des assign_designation[]
+  emp signatories[] @relation("emp")
+  sup signatories[] @relation("sup")
 }
 
 model assign_designation {
@@ -43,8 +45,9 @@ model assign_designation {
 model designation {
   id Int @id @default(autoincrement())
   designation_name String @db.VarChar(40)
-  department departments @relation(fields: [departmentName], references: [dept_name])
-  departmentName String
+  department departments[]
+  // department departments @relation(fields: [departmentName], references: [dept_name])
+  // departmentName String
 
   ass_des assign_designation[]
   @@unique([designation_name])
@@ -60,6 +63,24 @@ model departments {
   assDes assign_designation[]
 }
 
+model signatories {
+  id Int @id @default(autoincrement())
+  emp employees @relation("emp", fields: [emp_num], references: [emp_num])
+  emp_num String
+
+  sup employees @relation("sup", fields: [sup_num], references: [emp_num])
+  sup_num String
+
+  status statusEmp
+}
+
+model leaves {
+  id Int @id @default(autoincrement())
+  start_leave DateTime @db.Date
+  end_leave DateTime @db.Date
+  leaveType leavetype
+  status leaveStatus
+}
 
 enum statusEmp {
   ACTIVE
@@ -72,3 +93,15 @@ enum statusDep {
   INACTIVE
 }
 
+enum leavetype {
+  VACATION
+  SICK
+  MATERNITY
+  PATERNITY
+}
+
+enum leaveStatus {
+  APPROVED
+  DENIED
+  PENDING
+}
