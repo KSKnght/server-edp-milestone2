@@ -27,7 +27,7 @@ model employees {
   
   ass_des assign_designation[]
   emp signatories[] @relation("emp")
-  sup signatories[] @relation("sup")
+  // sup signatories[] @relation("sup")
 }
 
 model assign_designation {
@@ -40,6 +40,9 @@ model assign_designation {
   DepartmentName String 
   emp_type String @db.VarChar(40)
   status statusEmp
+
+  @@unique([empNum, status])
+  sign signatories[]
 }
 
 model designation {
@@ -68,8 +71,9 @@ model signatories {
   emp employees @relation("emp", fields: [emp_num], references: [emp_num])
   emp_num String
 
-  sup employees @relation("sup", fields: [sup_num], references: [emp_num])
+  sup assign_designation @relation(fields: [sup_num, status], references: [empNum, status])
   sup_num String
+
 
   status statusEmp
 }
