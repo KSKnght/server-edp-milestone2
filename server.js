@@ -87,9 +87,6 @@ app.get('/emp/:id', async (req, res) => {
             include: {
                 ass_des: {
                     select: {
-                        designation:{
-                            
-                        },
                         designationName: true,
                         DepartmentName: true,
                         emp_type: true,
@@ -106,6 +103,38 @@ app.get('/emp/:id', async (req, res) => {
     }
 });
 
+app.get('/desPerDep/', async (req, res) => {
+    // const id = req.params.id
+
+    // const des = await prisma.designation.findMany({
+    //     where: {
+    //         department: {
+    //             some: {
+    //                 id: Number(id)
+    //             }
+    //         }
+    //     },
+    //     select: {
+    //         designation_name: true
+    //     }
+
+    // })
+    const des = await prisma.departments.findMany({
+        select: {
+            dept_name: true,
+            id: true,
+            designation: {
+                select: {
+                    designation_name: true
+                }
+            }
+        }
+    })
+
+    res.status(200).json(des);
+
+})
+
 //create
 
 app.post('/addDeparment', async (req, res) => {
@@ -114,6 +143,51 @@ app.post('/addDeparment', async (req, res) => {
             data: {
                 dept_name: req.body.depName,
                 status: 'ACTIVE',
+            }
+        })
+        console.log("success!");
+    }
+    catch (err) {
+        console.log(err);
+    }
+});
+
+app.post('/addSignatory', async (req, res) => {
+    try {
+
+        const q = await prisma.assign_designation.findFirst({
+            where: {
+                empNum: "1"
+            }
+        })
+    
+        const r = await prisma.signatories.create({
+            data: {
+                emp: {
+                    connect: {
+                        emp_num: "2"
+                    }
+                },
+                sup: {
+                    connect: {
+                        id: q.id
+                    }
+                }
+            }
+        })
+
+        await prisma.signatories.create({
+            data: {
+                emp: {
+                    connect: {
+                        emp_num: req.body.emp_num
+                    }
+                },
+                sup: {
+                    connect: {
+                        emp_num: req.body.signtory
+                    }
+                }
             }
         })
         console.log("success!");
@@ -168,46 +242,65 @@ app.post('/createEmp', async (req, res) => { //sabay na ang assign_department
             },
         });
 
+        var isConnected = false
         
-            const r = await prisma.designation.findFirst({
-                where: {
-                    designation_name: req.body.designationName,
-                    departmentName: req.body.designationDepartment
-                }
-            })
+        const r = await prisma.designation.findFirst({
+            where: {
+                designation_name: req.body.designationName
+            },
+            select: {
+                id: true,
+                designation_name: true,
+                department: true
+            }
+        })
 
-            const p = await prisma.departments.findFirst({
-                where: {
-                    dept_name: req.body.designationDepartment
-                }
-            })
+        for (let i = 0; i < r.department.length; i++) {
+            if (r.department[i] == req.body.department)
+                isConnected = true
+        } 
+
+        const p = await prisma.departments.findFirst({
+            where: {
+                dept_name: req.body.designationDepartment
+            }
+        })
         
-            if (r == null) {
-                await prisma.designation.create({
-                    data: {
-                        designation_name: req.body.designationName,
-                        department: {
-                            connect: { id: p.id }
+
+        if (isConnected == false) {
+            await prisma.designation.update({
+                where: {
+                    designation_name: req.body.designationName
+                },
+                data: {
+                    department: {
+                        connect: {
+                            id: p.id
                         }
                     }
-                })
-            }
+                }
+            })
+        }
 
         await prisma.assign_designation.create({
             data: {
                 emp_type: 'REGULAR',
                 status: 'ACTIVE',
                 designation: {
-                    connect: { designation_name_departmentName: {
-                        departmentName: req.body.designationDepartment,
+                    connect: {
                         designation_name: req.body.designationName
-                    } }
+                    }
                 },
                 emp: {
                     connect: idEmp
+                },
+                department: {
+                    connect: {
+                        id: p.id
+                    }
                 }
             },
-            include: {emp: true, designation: true},
+            include: {emp: true, designation: true, department: true},
         });
         console.log("success!");
     }
@@ -215,6 +308,7 @@ app.post('/createEmp', async (req, res) => { //sabay na ang assign_department
         console.log(err);
     }
 });
+
 
 //update
 app.post('/upd/:id', async (req, res) => {
@@ -235,6 +329,8 @@ app.post('/upd/:id', async (req, res) => {
 
 app.post('/updEmp/:id', async (req, res) => {
     try {
+
+        // update employee table
         await prisma.employees.update({
             where: {
                 id: Number(req.params.id)
@@ -252,12 +348,14 @@ app.post('/updEmp/:id', async (req, res) => {
             },
         });
 
+        // get key for assign_designation of the employee
         const a = await prisma.assign_designation.findFirst({
             where: {
                 empNum: req.body.emp_num
             },
         });
 
+        // update the assign_designation.status of that employee
         await prisma.assign_designation.update({
             where: {
                 id: a.id,
@@ -267,48 +365,93 @@ app.post('/updEmp/:id', async (req, res) => {
             }
         })
 
-        if (req.body.designationName != a.designationName || req.body.designationDepartment != a.designationDepartment) {
+        var isConnected = false
+        
+        const t = await prisma.designation.findFirst({
+            where: {
+                designation_name: req.body.designationName
+            },
+            select: {
+                id: true,
+                designation_name: true,
+                department: true
+            }
+        })
+
+        const s = await prisma.departments.findFirst({
+            where: {
+                dept_name: req.body.designationDepartment
+            }
+        })
+
+        for (let i = 0; i < t.department.length; i++) {
+            if (t.department[i] == req.body.department)
+                isConnected = true
+        } 
+        if (isConnected == false) {
+            await prisma.designation.update({
+                where: {
+                    designation_name: req.body.designationName
+                },
+                data: {
+                    department: {
+                        connect: {
+                            id: s.id
+                        }
+                    }
+                }
+            })
+        }
+
+        // check if the designation exists or is not connected to that department
+        if (req.body.designationName != a.designationName) {     
+            // get key for designation id
             const r = await prisma.designation.findFirst({
                 where: {
                     designation_name: req.body.designationName,
-                    departmentName: req.body.designationDepartment
                 }
             })
 
-            const p = await prisma.departments.findFirst({
-                where: {
-                    dept_name: req.body.designationDepartment
-                }
-            })
-        
-            if (r == null) {
-                await prisma.designation.create({
-                    data: {
-                        designation_name: req.body.designationName,
-                        department: {
-                            connect: { id: p.id }
-                        }
-                    }
-                })
-            }
-        
             await prisma.assign_designation.update({
                 where: {
                     id: a.id
                 },
                 data: {
                     designation: {
-                        connect: { designation_name_departmentName: {
-                            departmentName: req.body.designationDepartment,
-                            designation_name: req.body.designationName
-                        } }
+                        connect: {
+                        designation_name: req.body.designationName }
                     }
                 },
                 include: {designation: true}
             })
 
-            console.log('nag update ang designation/department')
+            console.log('nag update ang designation')
         } 
+
+        if (req.body.designationDepartment != a.designationDepartment) {
+            // get key for department id
+            const p = await prisma.departments.findFirst({
+                where: {
+                    dept_name: req.body.designationDepartment
+                }
+            })
+
+            await prisma.assign_designation.update({
+                where: {
+                    id: a.id
+                },
+                data: {
+                    department: {
+                        connect: {
+                            dept_name: req.body.designationDepartment
+                        }
+                    }
+                },
+                include: {department: true}
+            })
+
+            console.log('nag update ang department?')
+        }
 
         console.log('nag update?')
         console.log(req.body.num);
@@ -517,7 +660,34 @@ async function tryUpd() {
 
     console.log(r)
 }
+
+async function getdeps() {
+    const q = await prisma.assign_designation.findFirst({
+        where: {
+            empNum: "1"
+        }
+    })
+
+    const r = await prisma.signatories.create({
+        data: {
+            emp: {
+                connect: {
+                    emp_num: "2"
+                }
+            },
+            sup: {
+                connect: {
+                    id: q.id
+                }
+            }
+        }
+    })
+
+    console.log(r)
+}
+
+// getdeps()
 // tryUpd()
 // createEmp()
-// delEmp()
+// delEmp() 
 
