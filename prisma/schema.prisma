@@ -26,6 +26,7 @@ model employees {
   zipcode Int @db.Integer
   
   ass_des assign_designation[]
+  leaves leaves[]
   emp signatories[] @relation("emp")
   // sup signatories[] @relation("sup")
 }
@@ -80,10 +81,16 @@ model signatories {
 
 model leaves {
   id Int @id @default(autoincrement())
+  emp employees @relation(fields: [emp_num], references: [emp_num])
+  emp_num String
   start_leave DateTime @db.Date
   end_leave DateTime @db.Date
   leaveType leavetype
   status leaveStatus
+}
+
+model addEarnings {
+  id Int @id @default(autoincrement())
 }
 
 enum statusEmp {
@@ -105,7 +112,7 @@ enum leavetype {
 }
 
 enum leaveStatus {
+  PENDING
   APPROVED
   DENIED
-  PENDING
 }
