@@ -38,6 +38,48 @@ app.get('/list', async (req, res) => {
     res.status(200).json(emp);
 });
 
+app.get('/leaves', async (req, res) => {
+    // const list = await prisma.assign_designation.findMany();
+    const emp = await prisma.leaves.findMany({
+        include: {
+            emp: {
+                select: {
+                    lastname: true,
+                    firstname: true
+                }
+            }
+        }
+    });
+    res.status(200).json(emp);
+});
+
+app.get('/sign', async (req, res) => {
+    // const list = await prisma.assign_designation.findMany();
+    const emp = await prisma.signatories.findMany({
+        select: {
+            emp_num: true,
+            status: true,
+            emp: {
+                select: {
+                    firstname: true,
+                    lastname: true
+                }
+            },
+            sup: {
+                select: {
+                    emp: {
+                        select: {
+                            firstname: true,
+                            lastname: true
+                        }
+                    }
+                }
+            }
+        }
+    })
+    res.status(200).json(emp);
+});
+
 // app.get('/showid', async (req, res) => {
 //     try {
 //         const id = await prisma.employees.findFirst({
@@ -104,21 +146,7 @@ app.get('/emp/:id', async (req, res) => {
 });
 
 app.get('/desPerDep/', async (req, res) => {
-    // const id = req.params.id
 
-    // const des = await prisma.designation.findMany({
-    //     where: {
-    //         department: {
-    //             some: {
-    //                 id: Number(id)
-    //             }
-    //         }
-    //     },
-    //     select: {
-    //         designation_name: true
-    //     }
-
-    // })
     const des = await prisma.departments.findMany({
         select: {
             dept_name: true,
@@ -154,10 +182,10 @@ app.post('/addDeparment', async (req, res) => {
 
 app.post('/addSignatory', async (req, res) => {
     try {
-
+        console.log("hi!")
         const q = await prisma.assign_designation.findFirst({
             where: {
-                empNum: "1"
+                empNum: req.body.signtory
             }
         })
     
@@ -165,7 +193,7 @@ app.post('/addSignatory', async (req, res) => {
             data: {
                 emp: {
                     connect: {
-                        emp_num: "2"
+                        emp_num: req.body.emp_num
                     }
                 },
                 sup: {
@@ -175,17 +203,26 @@ app.post('/addSignatory', async (req, res) => {
                 }
             }
         })
+        console.log("success!");
+    }
+    catch (err) {
+        console.log(err);
+    }
+});
 
-        await prisma.signatories.create({
+app.post('/addLeave', async (req, res) => {
+    try {
+        console.log("hi!")
+    
+        const r = await prisma.leaves.create({
             data: {
+                start_leave: req.body.start_leave,
+                end_leave: req.body.end_leave,
+                leaveType: req.body.leaveType,
+                status: req.body.status,
                 emp: {
                     connect: {
                         emp_num: req.body.emp_num
-                    }
-                },
-                sup: {
-                    connect: {
-                        emp_num: req.body.signtory
                     }
                 }
             }
@@ -321,6 +358,22 @@ app.post('/upd/:id', async (req, res) => {
                 status: req.body.statusDep,
             }
         });
+    }
+    catch (err) {
+        console.log(err);
+    }
+});
+
+app.post('/statusLeave/:id', async (req, res) => {
+    try {
+        await prisma.leaves.update({
+            where: {
+                id: Number(req.params.id)
+            },
+            data: {
+                status: req.body.status
+            }
+        })
     }
     catch (err) {
         console.log(err);
@@ -662,28 +715,18 @@ async function tryUpd() {
 }
 
 async function getdeps() {
-    const q = await prisma.assign_designation.findFirst({
+    const q = await prisma.leaves.update({
         where: {
-            empNum: "1"
-        }
-    })
-
-    const r = await prisma.signatories.create({
+            id: 1
+        },
         data: {
-            emp: {
-                connect: {
-                    emp_num: "2"
-                }
-            },
-            sup: {
-                connect: {
-                    id: q.id
-                }
-            }
+            status: 'APPROVED'
         }
     })
 
-    console.log(r)
+    // const r = await prisma.leaves.findMany({})
+
+    // console.log(q[0].start_leave.toLocaleDateString())
 }
 
 // getdeps()
